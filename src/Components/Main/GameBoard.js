@@ -15,6 +15,7 @@ function GameBoard() {
   const [currentColorOrder, setCurrentColorOrder] = useState([]);
   const [draggedItem, setDraggedItem] = useState(null);
   const [remainingMoves, setRemainingMoves] = useState(25);
+  const[score,setScore] = useState(0);
 
   useEffect(() => {
     // Check for win/loss when the state changes
@@ -135,29 +136,79 @@ function GameBoard() {
 
     return () => clearInterval(timer);
   }, [row, currentColorOrder]);
-
   const isValidMove = (fromRowIndex, fromColIndex, toRowIndex, toColIndex) => {
     const isAdjacent =
-      Math.abs(fromRowIndex - toRowIndex) +
-        Math.abs(fromColIndex - toColIndex) ===
-      1;
-    return isAdjacent;
-  };
-
-  const moveBox = (fromRowIndex, fromColIndex, toRowIndex, toColIndex) => {
-    if (isValidMove(fromRowIndex, fromColIndex, toRowIndex, toColIndex)) {
-      const newColorOrder = [...currentColorOrder];
-      const fromIndex = fromRowIndex * row + fromColIndex;
-      const toIndex = toRowIndex * row + toColIndex;
-
-      newColorOrder[toIndex] = currentColorOrder[fromIndex];
-      newColorOrder[fromIndex] = currentColorOrder[toIndex];
-
-      setCurrentColorOrder(newColorOrder);
-      setRemainingMoves((prevMoves) => prevMoves - 1);
+      Math.abs(fromRowIndex - toRowIndex) + Math.abs(fromColIndex - toColIndex) === 1;
+  
+    if (isAdjacent) {
+      // Check if the move is to an adjacent position
+      const isAdjacentPosition =
+        (toRowIndex === fromRowIndex && Math.abs(toColIndex - fromColIndex) === 1) ||
+        (toColIndex === fromColIndex && Math.abs(toRowIndex - fromRowIndex) === 1);
+  
+      if (isAdjacentPosition) {
+        return true;
+      }
     }
-    setDraggedItem(null);
+  
+    return false;
   };
+  
+
+
+    const moveBox = (fromRowIndex, fromColIndex, toRowIndex, toColIndex) => {
+        if (isValidMove(fromRowIndex, fromColIndex, toRowIndex, toColIndex)) {
+          const newColorOrder = [...currentColorOrder];
+          const fromIndex = fromRowIndex * row + fromColIndex;
+          const toIndex = toRowIndex * row + toColIndex;
+    
+          newColorOrder[toIndex] = currentColorOrder[fromIndex];
+          newColorOrder[fromIndex] = currentColorOrder[toIndex];
+    
+          setCurrentColorOrder(newColorOrder);
+    
+          // Update remaining moves only when the user makes a move
+          setRemainingMoves((prevMoves) => prevMoves - 1);
+    
+          // Calculate the score based on matching 3 and 4 boxes
+          const scoreFromMatches3 = calculateScoreFromMatches(newColorOrder, 3);
+          const scoreFromMatches4 = calculateScoreFromMatches(newColorOrder, 4);
+    
+          setScore((prevScore) => prevScore + scoreFromMatches3 + scoreFromMatches4);
+    
+          setDraggedItem(null);
+        }
+      };
+    
+      const calculateScoreFromMatches = (colorOrder, matchCount) => {
+        let score = 0;
+    
+        for (let i = 0; i < row * row; i++) {
+          const consecutiveBoxes = [];
+          for (let j = 0; j < matchCount; j++) {
+            consecutiveBoxes.push(i + j);
+          }
+    
+          const currentColor = colorOrder[i];
+    
+          if (
+            consecutiveBoxes.every(
+              (item) => colorOrder[item] === currentColor && currentColor !== " "
+            )
+          ) {
+            for (let k = 0; k < matchCount; k++) {
+              colorOrder[consecutiveBoxes[k]] = " ";
+            }
+            score += matchCount === 3 ? 5 : 10;
+          }
+        }
+    
+        return score;
+      };
+    
+  
+
+  
 
   const DraggableBox = ({ color, rowIndex, colIndex }) => {
     const [{ isDragging }, drag] = useDrag(() => ({
@@ -196,8 +247,8 @@ function GameBoard() {
     textAlign: "center",
     // width: "auto",
     // height: "auto",
-    width: "60px",
-    height: "50px",
+    // width: "60px",
+    // height: "50px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -205,10 +256,11 @@ function GameBoard() {
   }));
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
-    <Box sx={{ flexGrow: 1, width: '50%', pt: '50px' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 'auto' }}>
+    <Box sx={{  width: '50%', pt: '50px' }}>
       <Typography variant="h4" align="center">
-        Score: {state.score}
+        Score: {score}
+        {/* Score: {state.score} */}
       </Typography>
       <Typography variant="h4" align="center">Remaining Moves: {remainingMoves}</Typography>
       {state.winStatus && (
